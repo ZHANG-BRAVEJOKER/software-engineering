@@ -1,0 +1,70 @@
+@startuml 预约时序图
+!theme plain
+skinparam defaultFontName "Microsoft YaHei"
+title 校园二手交易系统 — 买家预约到完成交易时序图 (Sequence Diagram)
+
+actor 买家 as B
+actor 卖家 as S
+participant "商品大厅/详情页" as UI
+participant "预约订单服务" as OS
+participant "商品状态机" as IM
+participant "通知服务" as NT
+participant "定时任务(48h/24h)" as CRON
+participant "管理员后台" as ADM
+
+autonumber
+
+== 1. 预约锁单 ==
+B -> UI : 点击"立即预约"
+UI -> OS : createOrder(buyerId, itemId)
+OS -> IM : 校验商品状态是否在售
+alt 商品已被预订/已下架
+  IM --> OS : 返回状态冲突
+  OS --> UI : 提示"商品状态已变化,请刷新"
+else 可以预约
+  IM -> IM : 商品状态 在售 -> 已预订
+  OS -> OS : 订单状态 = 待交接\n记录cancelDeadline=now+48h
+  OS -> NT : 通知买卖双方,展示对方联系方式
+  NT --> B : 推送"预约成功,请在48h内线下交接"
+  NT --> S : 推送"你的商品被预约"
+  OS --> UI : 返回预约成功页(订单号+倒计时)
+end
+
+== 2a. 超时未交接 ==
+CRON -> OS : 扫描cancelDeadline到期且未提货的订单
+OS -> IM : 商品 已预订 -> 在售
+OS -> OS : 订单 待交接 -> 已取消(超时取消)
+OS -> NT : 通知双方"预约超时自动取消"
+
+== 2b. 任一方主动取消 ==
+B -> OS : cancelOrder(reason="联系不上")
+OS -> IM : 商品 已预订 -> 在售
+OS -> OS : 订单 -> 已取消(买家取消)\nbuyerCancelCount++
+alt 同一买家对同一商品取消>=2次
+  OS -> OS : 禁止该买家再次预约此商品
+end
+OS --> S : 通知"买家已取消"
+
+== 2c. 买家线下交接后点提货 ==
+B -> UI : 点击"我已线下提货"
+UI -> OS : confirmPickup(orderId)
+OS -> OS : 停止48h倒计时\n启动sellerDisputeDeadline=now+24h
+OS -> NT : 催促卖家确认/异议
+
+alt 24h内卖家无异议
+  CRON -> OS : 到期自动结算
+  OS -> IM : 商品 已预订 -> 已售出
+  OS -> OS : 订单 待交接 -> 已完成
+else 卖家24h内提出异议
+  S -> OS : dispute(reason="未收到货/钱货两清")
+  OS -> ADM : 进入纠纷队列
+  ADM --> OS : 裁决结果
+  OS -> IM : 按裁决置为已售出或回滚到在售
+end
+
+== 3. 违规熔断(任意时刻) ==
+ADM -> OS : 封禁卖家/买家账号
+OS -> IM : 卖家被封:其名下商品全部 -> 违规下架
+OS -> OS : 所有待交接订单 -> 已取消(违规关闭)
+OS -> NT : 通知买家"对方账号异常,请勿线下转账"
+@enduml

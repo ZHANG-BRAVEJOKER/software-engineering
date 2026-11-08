@@ -1,0 +1,143 @@
+@startuml 类图
+!theme plain
+skinparam defaultFontName "Microsoft YaHei"
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+left to right direction
+
+title 校园二手交易系统 — 核心类图 (Class Diagram)
+
+class User {
+  - userId: String
+  - studentId: String {unique}
+  - campusEmail: String {unique}
+  - displayName: String
+  - contactPhone: String
+  - contactWechat: String
+  - role: Role
+  - authStatus: AuthStatus
+  - accountStatus: AccountStatus
+  - createdAt: DateTime
+  + submitAuth(): AuthTicket
+  + publishItem(title, price): Item
+  + reserve(itemId): Order
+  + cancelOrder(orderId, reason): void
+  + confirmPickup(orderId): void
+}
+
+class Item {
+  - itemId: String
+  - sellerId: String
+  - title: String
+  - category: Category
+  - condition: ItemCondition
+  - price: Decimal
+  - negotiable: Boolean
+  - pickupLocation: String
+  - imageUrls: List<String>
+  - status: ItemStatus
+  - createdAt: DateTime
+  + submitReview(): void
+  + updatePrice(newPrice): void
+  + updateCoreInfo(): void
+  + takeDown(reason): void
+  + appealAfterViolation(): void
+}
+
+class Order {
+  - orderId: String
+  - buyerId: String
+  - sellerId: String
+  - itemId: String
+  - status: OrderStatus
+  - reserveAt: DateTime
+  - cancelDeadline: DateTime
+  - pickupAt: DateTime
+  - sellerDisputeDeadline: DateTime
+  - cancelReason: String
+  - cancelType: CancelType
+  + confirmPickup(): void
+  + cancel(reason): void
+  + autoTimeout(): void
+  + closeByViolation(): void
+}
+
+class Favorite {
+  - favoriteId: String
+  - userId: String
+  - itemId: String
+  - addedAt: DateTime
+}
+
+class OperationLog {
+  - logId: String
+  - operatorId: String
+  - action: String
+  - targetType: String
+  - targetId: String
+  - beforeValue: String
+  - afterValue: String
+  - ipAddress: String
+  - createdAt: DateTime
+  + static query(filter): List<OperationLog>
+}
+
+enum Role {
+  GUEST
+  STUDENT
+  ADMIN
+}
+
+enum AuthStatus {
+  UNAUTHENTICATED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AccountStatus {
+  NORMAL
+  BANNED
+}
+
+enum ItemStatus {
+  DRAFT
+  PENDING_REVIEW
+  ON_SALE
+  RESERVED
+  SOLD
+  TAKEN_DOWN
+  REVIEW_REJECTED
+  VIOLATION_TAKEN_DOWN
+}
+
+enum OrderStatus {
+  PENDING_HANDOVER
+  COMPLETED
+  CANCELLED
+}
+
+enum CancelType {
+  BUYER_CANCEL
+  SELLER_CANCEL
+  TIMEOUT_CANCEL
+  VIOLATION_CLOSE
+}
+
+User "1" -- "0..*" Item : 发布 / 作为卖家
+User "1" -- "0..*" Order : 作为买家
+User "1" -- "0..*" Order : 作为卖家
+Item "1" -- "0..1" Order : 被预约
+User "1" -- "0..*" Favorite
+Item "1" -- "0..*" Favorite
+User "1" -- "0..*" OperationLog : 操作
+Item "1" -- "0..*" OperationLog : 目标
+Order "1" -- "0..*" OperationLog : 目标
+
+User --> Role
+User --> AuthStatus
+User --> AccountStatus
+Item --> ItemStatus
+Order --> OrderStatus
+Order --> CancelType
+@enduml

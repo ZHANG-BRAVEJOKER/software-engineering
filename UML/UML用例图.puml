@@ -1,0 +1,86 @@
+@startuml 用例图
+!theme plain
+skinparam defaultFontName "Microsoft YaHei"
+left to right direction
+skinparam packageStyle rectangle
+title 校园二手交易系统 — 用例图 (Use Case Diagram)
+
+actor "未认证访客\n(Guest)" as G
+actor "已认证学生\n(Student)" as S
+actor "系统管理员\n(Admin)" as A
+
+rectangle "校园二手交易平台" {
+
+  package "浏览与搜索" {
+    usecase "UC-01 浏览商品大厅" as UC01
+    usecase "UC-02 多条件搜索\n(分类/价格/成色/位置)" as UC02
+    usecase "UC-03 查看商品详情" as UC03
+  }
+
+  package "认证与账号" {
+    usecase "UC-04 学号/校园邮箱注册" as UC04
+    usecase "UC-05 提交实名认证" as UC05
+    usecase "UC-06 补全联系方式" as UC06
+  }
+
+  package "商品管理" {
+    usecase "UC-07 发布草稿" as UC07
+    usecase "UC-08 提交审核" as UC08
+    usecase "UC-09 修改价格/议价方式" as UC09
+    usecase "UC-10 修改标题/图片/详情\n(触发重审)" as UC10
+    usecase "UC-11 主动下架" as UC11
+    usecase "UC-12 违规下架后申诉" as UC12
+  }
+
+  package "交易" {
+    usecase "UC-13 预约商品(锁单)" as UC13
+    usecase "UC-14 取消预约(填原因)" as UC14
+    usecase "UC-15 买家确认已提货" as UC15
+    usecase "UC-16 卖家异议(24h内)" as UC16
+    usecase "UC-17 收藏商品" as UC17
+  }
+
+  package "管理后台" {
+    usecase "UC-18 审核商品(通过/驳回)" as UC18
+    usecase "UC-19 强制违规下架" as UC19
+    usecase "UC-20 封禁用户(熔断订单)" as UC20
+    usecase "UC-21 复核申诉" as UC21
+    usecase "UC-22 操作日志查询" as UC22
+    usecase "UC-23 统计面板\n(品类成交量/卖家汇总)" as UC23
+  }
+}
+
+G --> UC01
+G --> UC02
+G --> UC03
+G ..> UC04 : <<extend>>\n点击互动时跳转
+
+S --> UC01
+S --> UC02
+S --> UC03
+S --> UC04
+S --> UC05
+S --> UC06
+S --> UC07
+S --> UC08
+S --> UC09
+S --> UC10
+S --> UC11
+S --> UC12
+S --> UC13
+S --> UC14
+S --> UC15
+S --> UC16
+S --> UC17
+
+A --> UC18
+A --> UC19
+A --> UC20
+A --> UC21
+A --> UC22
+A --> UC23
+
+UC03 .> UC13 : <<include>>\n预约需登录
+UC08 .> UC18 : <<include>>\n需管理员审核
+UC12 .> UC21 : <<include>>\n需管理员复核
+@enduml
