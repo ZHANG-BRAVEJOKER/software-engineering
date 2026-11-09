@@ -1,0 +1,77 @@
+@startuml 架构组件图
+!theme plain
+skinparam defaultFontName "Microsoft YaHei"
+skinparam componentStyle rectangle
+title 校园二手交易系统 — 软件架构组件图 (Component Diagram)
+
+package "表现层 (手机端 H5)" as UI {
+    [商品大厅/搜索] as UI1
+    [商品详情] as UI2
+    [发布商品/草稿] as UI3
+    [个人中心] as UI4
+    [我的预约/订单] as UI5
+    [管理员审核后台] as UI6
+}
+
+package "API 接口层 (REST)" as API {
+    [AuthController] as C_AUTH
+    [ItemController] as C_ITEM
+    [OrderController] as C_ORDER
+    [FavoriteController] as C_FAV
+    [AdminController] as C_ADMIN
+}
+
+package "业务服务层" as SVC {
+    [用户与认证服务] as S_USER
+    [商品状态机服务] as S_ITEM
+    [预约订单服务] as S_ORDER
+    [审核与申诉服务] as S_AUDIT
+    [收藏服务] as S_FAV
+    [通知服务] as S_NOTIFY
+    [操作日志服务] as S_LOG
+}
+
+package "定时任务层" as CRON {
+    [48h 超时取消任务] as J_TIMEOUT
+    [24h 异议结算任务] as J_DISPUTE
+    [审核超期预警] as J_SLA
+}
+
+package "数据层" as DB {
+    database "MySQL\n(user/item/order/favorite/log)" as DB_MYSQL
+    queue "对象存储\n(商品图片)" as DB_OSS
+}
+
+UI1 --> C_ITEM
+UI2 --> C_ITEM
+UI2 --> C_ORDER
+UI3 --> C_ITEM
+UI4 --> C_ORDER
+UI4 --> C_FAV
+UI5 --> C_ORDER
+UI6 --> C_ADMIN
+
+C_AUTH --> S_USER
+C_ITEM --> S_ITEM
+C_ORDER --> S_ORDER
+C_FAV --> S_FAV
+C_ADMIN --> S_AUDIT
+
+S_USER --> DB_MYSQL
+S_ITEM --> DB_MYSQL
+S_ITEM --> DB_OSS
+S_ORDER --> DB_MYSQL
+S_FAV --> DB_MYSQL
+S_AUDIT --> DB_MYSQL
+S_LOG --> DB_MYSQL
+
+S_ITEM --> S_LOG : 写日志
+S_ORDER --> S_LOG : 写日志
+S_AUDIT --> S_LOG : 写日志
+S_ORDER --> S_NOTIFY : 推送通知
+S_AUDIT --> S_NOTIFY : 推送通知
+
+J_TIMEOUT --> S_ORDER : 扫描超时订单
+J_DISPUTE --> S_ORDER : 扫描待结算订单
+J_SLA --> S_AUDIT : 标记超期审核
+@enduml
